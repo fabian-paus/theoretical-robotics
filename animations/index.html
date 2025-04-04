@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="description" content="Just some robotics animations">
+        <title>Animations Testing for Robotics</title>
+        <style type="text/css">
+            canvas {
+                border: 1px solid black;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Theoretical Robotics</h1>
+        <canvas id="robot"></canvas>
+        <div>
+            <input type="range" id="q1" name="q1" min="0" max="100" value="50" />
+            <label for="q1">Joint 1</label>
+            <input type="range" id="q2" name="q2" min="0" max="100" value="0" />
+            <label for="q2">Joint 2</label>
+        </div>
+        <script src="robots.js"></script>
+    </body>
+</html>
