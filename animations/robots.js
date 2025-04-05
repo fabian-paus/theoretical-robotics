@@ -19,8 +19,8 @@ console.log("Robots");
  */
 
 const robotDef = /** @type {RobotDef} */ ({
-    l1: 50,
-    l2: 50,
+    l1: 20,
+    l2: 20,
 
     q1_min: 0.0,
     q1_max: Math.PI,
@@ -29,7 +29,7 @@ const robotDef = /** @type {RobotDef} */ ({
     q2_max: +Math.PI / 2,
 });
 
-const robotPos = { x: 150, y: 130 };
+const robotPos = { x: 0, y: 0 };
 
 /**
  * 
@@ -45,16 +45,15 @@ function line(ctx, from, to) {
 }
 
 /**
- * 
- * @param {CanvasRenderingContext2D} ctx 
  * @param {Pos} center 
  * @param {number} radius 
+ * @returns {Path2D}
  */
-function circle(ctx, center, radius) {
-    ctx.beginPath();
-    ctx.ellipse(center.x, center.y, radius, radius, 
+function circle(center, radius) {
+    const path = new Path2D();
+    path.ellipse(center.x, center.y, radius, radius, 
         0, 0, 2 * Math.PI);
-    ctx.stroke();
+    return path;
 }
 
 /**
@@ -63,13 +62,24 @@ function circle(ctx, center, radius) {
  * @param {RobotConfig} config
  */
 function drawRobot(ctx, config) {
-
     ctx.reset();
+
+    // Scale everything with the width of the canvas
+    const w = ctx.canvas.width;
+    const scale_x = w / 100;
+
+    ctx.transform(
+        1, 0, 
+        0, -1,
+        w / 2, 
+        ctx.canvas.height - 10 * scale_x,
+    );
+    ctx.lineWidth = scale_x;
 
     const pos = robotPos;
 
     // Base
-    const baseWidth = 60;
+    const baseWidth = 20 * scale_x;
     const baseStartX = pos.x - baseWidth / 2;
     const baseEndX = pos.x + baseWidth / 2
     line(ctx, { x: baseStartX, y: pos.y }, { x: baseEndX, y: pos.y });
@@ -78,31 +88,38 @@ function drawRobot(ctx, config) {
     const baseLineLength = baseWidth / 6;
     const lineCount = 5;
     for (let i = 0; i <= lineCount; ++i) {
-        const xOffset = baseStartX + i * baseWidth / (lineCount);
+        const xOffset = baseStartX + i * baseWidth / lineCount;
         line(ctx, 
             { x: xOffset, y: pos.y }, 
-            { x: xOffset - baseLineLength, y: pos.y + baseLineLength });
+            { x: xOffset - baseLineLength, y: pos.y - baseLineLength });
     }
 
 
+    const l1 = scale_x * robotDef.l1;
     const seg1 = {
-        x: pos.x + robotDef.l1 * Math.cos(config.q1),
-        y: pos.y + robotDef.l1 * Math.sin(-config.q1),
+        x: pos.x + l1 * Math.cos(config.q1),
+        y: pos.y + l1 * Math.sin(config.q1),
     };
     
     line(ctx, pos, seg1);
 
+    const l2 = scale_x * robotDef.l2;
     const seg2 = {
-        x: seg1.x + robotDef.l2 * Math.cos(config.q1 + config.q2),
-        y: seg1.y + robotDef.l2 * Math.sin(-(config.q1 + + config.q2)),
+        x: seg1.x + l2 * Math.cos(config.q1 + config.q2),
+        y: seg1.y + l2 * Math.sin(config.q1 + config.q2),
     };
     
     line(ctx, seg1, seg2);
 
     // Draw joints
-    const jointDotRadius = 5;
-    circle(ctx, seg1, jointDotRadius);
-    circle(ctx, pos, jointDotRadius);
+    const jointDotRadius = 2.5 * scale_x;
+    const seg1Joint = circle(pos, jointDotRadius);
+    const seg2Joint = circle(seg1, jointDotRadius);
+    const endPoint = circle(seg2, jointDotRadius);
+
+    ctx.fill(seg1Joint);
+    ctx.fill(seg2Joint);
+    ctx.fill(endPoint);
 }
 
 const robot = /** @type {HTMLCanvasElement} */(document.getElementById("robot"));
