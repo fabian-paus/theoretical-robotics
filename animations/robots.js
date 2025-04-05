@@ -22,8 +22,8 @@ const robotDef = /** @type {RobotDef} */ ({
     l1: 20,
     l2: 20,
 
-    q1_min: 0.0,
-    q1_max: Math.PI,
+    q1_min: 0.25 * Math.PI,
+    q1_max: 0.75 * Math.PI,
 
     q2_min: -Math.PI / 2,
     q2_max: +Math.PI / 2,
@@ -122,10 +122,56 @@ function drawRobot(ctx, config) {
     ctx.fill(endPoint);
 }
 
+/**
+ * 
+ * @param {CanvasRenderingContext2D} ctx 
+ * @param {RobotDef} def 
+ * @param {RobotConfig} config 
+ */
+function drawConfigSpace(ctx, def, config) {
+    ctx.reset();
+
+    const x_min = -Math.PI;
+    const x_max = +Math.PI;
+    const x_range = x_max - x_min;
+
+    const y_min = -Math.PI;
+    const y_max = +Math.PI;
+    const y_range = y_max - y_min;
+
+
+    const x_scale = (ctx.canvas.width / x_range) * 0.9;
+    const y_scale = ctx.canvas.height / y_range;
+
+    ctx.lineWidth = 1.0 / x_scale;
+
+    ctx.transform(
+        x_scale, 0,
+        0, -x_scale,
+        ctx.canvas.width / 2,
+        ctx.canvas.height / 2,
+    );
+
+    line(ctx, { x: x_min, y: 0}, { x: x_max, y: 0});
+    line(ctx, { x: 0, y: y_min}, { x: 0, y: y_max});
+
+    const current = circle({ x: config.q1, y: config.q2}, 4 / x_scale);
+    ctx.fillStyle = '#48A6A7';
+    ctx.fill(current);
+
+}
+
 const robot = /** @type {HTMLCanvasElement} */(document.getElementById("robot"));
 
-const ctx = robot.getContext("2d");
-if (!ctx) {
+const robotContext = robot.getContext("2d");
+if (!robotContext) {
+    throw new Error("Could not create 2D canvas context");
+}
+
+const configCanvas = /** @type {HTMLCanvasElement} */(document.getElementById("config"));
+
+const configContext = configCanvas.getContext("2d");
+if (!configContext) {
     throw new Error("Could not create 2D canvas context");
 }
 
@@ -143,18 +189,20 @@ function updateConfig() {
     config.q2 = q2;
 }
 
-
-updateConfig();
-drawRobot(ctx, config);
+function draw() {
+    updateConfig();
+    drawRobot(robotContext, config);
+    drawConfigSpace(configContext, robotDef, config);
+}
 
 
 q1Input.addEventListener('input', function() {
-    updateConfig();
-    drawRobot(ctx, config);
+    draw();
 });
 
 
 q2Input.addEventListener('input', function() {
-    updateConfig();
-    drawRobot(ctx, config);
+    draw();
 });
+
+draw();

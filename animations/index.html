@@ -13,7 +13,11 @@
     </head>
     <body>
         <h1>Theoretical Robotics</h1>
-        <canvas id="robot" width="400" height="300"></canvas>
+        <div style="display: flex; flex-direction: row; gap: 1rem">
+            <canvas id="robot" width="400" height="300"></canvas>
+            <canvas id="config" width="300" height="300"></canvas>
+        </div>
+        
         <div>
             <input type="range" id="q1" name="q1" min="0" max="100" value="50" />
             <label for="q1">Joint 1</label>
