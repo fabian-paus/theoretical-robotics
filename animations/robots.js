@@ -241,15 +241,6 @@ function createWorkspace(def) {
     const min_y = 0;
     const max_y = +len;
 
-    const data = [];
-    for (let y = min_x; y <= max_y; ++y) {
-        const row = [];
-        for (let x = min_x; x <= max_x; ++x) {
-            row.push(0);
-        }
-        data.push(row);
-    }
-
     // How many elements do we have in each dimension?
     const length_x = 40;
     const length_y = 20;
@@ -259,6 +250,17 @@ function createWorkspace(def) {
     const tick_x = range_x / length_x;
     const range_y = max_y - min_y;
     const tick_y = range_y / length_y;
+
+    const data = [];
+    for (let y = 0; y < length_y; ++y) {
+        const row = [];
+        for (let x = 0; x < length_x; ++x) {
+            row.push(0);
+        }
+        data.push(row);
+    }
+
+
     return { data, min_x, max_x, min_y, max_y,
         length_x,
         length_y,
@@ -275,16 +277,14 @@ function createWorkspace(def) {
  * @param {number} value 
  */
 function setWorkspaceValue(workspace, x, y, value) {
-    if (y < workspace.min_y || y > workspace.max_y) return;
-    if (x < workspace.min_x || x > workspace.max_x) return;
-
     const y_offset = y - workspace.min_y;
-    const y_range = workspace.max_y - workspace.min_y;
     const y_index = Math.floor(y_offset / workspace.tick_y);
 
     const x_offset = x - workspace.min_x;
-    const x_range = workspace.max_x - workspace.min_x;
     const x_index = Math.floor(x_offset / workspace.tick_x);
+
+    if (y_index < 0 || y_index >= workspace.length_y) return;
+    if (x_index < 0 || x_index >= workspace.length_x) return;
 
     workspace.data[y_index][x_index] = value;
 
@@ -447,3 +447,32 @@ configContext.canvas.addEventListener('mouseup', function(event) {
 });
 
 nextFrame();
+
+const sampleWorkspaceButton = /** @type{HTMLButtonElement} */(document.getElementById("sampleWorkspace"));
+sampleWorkspaceButton.addEventListener('click', () => {
+    console.log("Sample");
+
+    let q1_i = 0;
+    let q2_i = 0;
+    let q1_inc = 2;
+
+    function nextConfiguration() {
+        q1Input.value = q1_i;
+        q2Input.value = q2_i;
+
+
+        q1_i += q1_inc;
+        if (q1_i > 100 || q1_i < 0) {
+            q2_i += 2;
+            q1_inc *= -1;
+        }
+        if (q2_i > 100) {
+            return;
+        }
+
+        draw();
+        window.requestAnimationFrame(nextConfiguration);
+    }
+
+    window.requestAnimationFrame(nextConfiguration);
+});
