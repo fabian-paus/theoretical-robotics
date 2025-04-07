@@ -27,6 +27,12 @@ const robotDef = /** @type {RobotDef} */ ({
 
     q2_min: -Math.PI / 2,
     q2_max: +Math.PI / 2,
+    
+    // q1_min: 0,
+    // q1_max: Math.PI,
+
+    // q2_min: -Math.PI,
+    // q2_max: +Math.PI,
 });
 
 const robotPos = { x: 0, y: 0 };
@@ -122,6 +128,13 @@ function drawRobot(ctx, config) {
     ctx.fill(endPoint);
 }
 
+const mouse = {
+    pos: { x: 0, y: 0 },
+    left: {
+        down: false,
+    },
+}
+
 /**
  * 
  * @param {CanvasRenderingContext2D} ctx 
@@ -140,25 +153,49 @@ function drawConfigSpace(ctx, def, config) {
     const y_range = y_max - y_min;
 
 
-    const x_scale = (ctx.canvas.width / x_range) * 0.9;
-    const y_scale = ctx.canvas.height / y_range;
+    const scale = (ctx.canvas.width / x_range) * 0.9;
 
-    ctx.lineWidth = 1.0 / x_scale;
+    ctx.lineWidth = 1.0 / scale;
 
     ctx.transform(
-        x_scale, 0,
-        0, -x_scale,
+        scale, 0,
+        0, -scale,
         ctx.canvas.width / 2,
-        ctx.canvas.height / 2,
+        ctx.canvas.width / 2,
     );
 
+    // Config space
+    ctx.fillStyle = '#BAEBF0';
+    ctx.fillRect(def.q1_min, def.q2_min,
+        def.q1_max - def.q1_min,
+        def.q2_max - def.q2_min);
+
+    // Coordinate system
     line(ctx, { x: x_min, y: 0}, { x: x_max, y: 0});
     line(ctx, { x: 0, y: y_min}, { x: 0, y: y_max});
 
-    const current = circle({ x: config.q1, y: config.q2}, 4 / x_scale);
+    // Current configuration
+    const current = circle({ x: config.q1, y: config.q2}, 4 / scale);
     ctx.fillStyle = '#48A6A7';
     ctx.fill(current);
 
+    const selected = circle({ x: config.q1, y: config.q2}, 7 / scale);
+    const hover = ctx.isPointInPath(selected, mouse.pos.x, mouse.pos.y);
+    if (hover) {
+        ctx.fill(selected);
+    }
+
+    if (mouse.left.down) {
+        const q = ctx.getTransform().inverse().transformPoint(mouse.pos);
+        config.q1 = q.x;
+        config.q1 = Math.min(Math.max(config.q1, def.q1_min), def.q1_max);
+        config.q2 = q.y;
+        config.q2 = Math.min(Math.max(config.q2, def.q2_min), def.q2_max);
+
+        // TODO: Apply limits
+        setConfigInpus();
+        nextFrame();
+    }
 }
 
 const robot = /** @type {HTMLCanvasElement} */(document.getElementById("robot"));
@@ -189,20 +226,50 @@ function updateConfig() {
     config.q2 = q2;
 }
 
+function setConfigInpus() {
+    const q1Ratio = (config.q1 - robotDef.q1_min) / (robotDef.q1_max - robotDef.q1_min);
+    q1Input.value = Math.floor(100.0 * q1Ratio);
+
+    const q2Ratio = (config.q2 - robotDef.q2_min) / (robotDef.q2_max - robotDef.q2_min);
+    q2Input.value = Math.floor(100.0 * q2Ratio);
+}
+
 function draw() {
-    updateConfig();
+    if (!mouse.left.down) {
+        updateConfig();
+    }
     drawRobot(robotContext, config);
     drawConfigSpace(configContext, robotDef, config);
 }
 
+function nextFrame() {
+    window.requestAnimationFrame(draw);
+}
+
 
 q1Input.addEventListener('input', function() {
-    draw();
+    nextFrame();
 });
 
 
 q2Input.addEventListener('input', function() {
-    draw();
+    nextFrame();
 });
 
-draw();
+configCanvas.addEventListener('mousemove', function(event) {
+    mouse.pos.x = event.offsetX;
+    mouse.pos.y = event.offsetY;
+    nextFrame();
+});
+
+configCanvas.addEventListener('mousedown', function(event) {
+    mouse.left.down = true;
+    nextFrame();
+});
+
+configCanvas.addEventListener('mouseup', function(event) {
+    mouse.left.down = false;
+    nextFrame();
+});
+
+nextFrame();
