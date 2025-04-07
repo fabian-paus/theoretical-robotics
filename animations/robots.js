@@ -38,6 +38,30 @@ const robotDef = /** @type {RobotDef} */ ({
 const robotPos = { x: 0, y: 0 };
 
 /**
+ * @typedef ForwardResult
+ * @property {Pos} seg1
+ * @property {Pos} seg2
+ */
+
+/**
+ * 
+ * @param {RobotDef} def 
+ * @param {RobotConfig} config 
+ * @returns {ForwardResult}
+ */
+function forward(def, config) {
+    const seg1 = {
+        x: robotPos.x + def.l1 * Math.cos(config.q1),
+        y: robotPos.y + def.l1 * Math.sin(config.q1),
+    };
+    const seg2 = {
+        x: seg1.x + def.l2 * Math.cos(config.q1 + config.q2),
+        y: seg1.y + def.l2 * Math.sin(config.q1 + config.q2),
+    };
+    return { seg1, seg2 };
+}
+
+/**
  * 
  * @param {CanvasRenderingContext2D} ctx 
  * @param {Pos} from 
@@ -100,28 +124,22 @@ function drawRobot(ctx, config) {
             { x: xOffset - baseLineLength, y: pos.y - baseLineLength });
     }
 
+    const state = forward(robotDef, config);
 
-    const l1 = scale_x * robotDef.l1;
-    const seg1 = {
-        x: pos.x + l1 * Math.cos(config.q1),
-        y: pos.y + l1 * Math.sin(config.q1),
-    };
+    // TODO: Bake scaling into the transformation
+    state.seg1.x *= scale_x;
+    state.seg1.y *= scale_x;
+    state.seg2.x *= scale_x;
+    state.seg2.y *= scale_x;
     
-    line(ctx, pos, seg1);
-
-    const l2 = scale_x * robotDef.l2;
-    const seg2 = {
-        x: seg1.x + l2 * Math.cos(config.q1 + config.q2),
-        y: seg1.y + l2 * Math.sin(config.q1 + config.q2),
-    };
-    
-    line(ctx, seg1, seg2);
+    line(ctx, pos, state.seg1);
+    line(ctx, state.seg1, state.seg2);
 
     // Draw joints
     const jointDotRadius = 2.5 * scale_x;
     const seg1Joint = circle(pos, jointDotRadius);
-    const seg2Joint = circle(seg1, jointDotRadius);
-    const endPoint = circle(seg2, jointDotRadius);
+    const seg2Joint = circle(state.seg1, jointDotRadius);
+    const endPoint = circle(state.seg2, jointDotRadius);
 
     ctx.fill(seg1Joint);
     ctx.fill(seg2Joint);
@@ -198,19 +216,65 @@ function drawConfigSpace(ctx, def, config) {
     }
 }
 
-const robot = /** @type {HTMLCanvasElement} */(document.getElementById("robot"));
+/**
+ * 
+ * @param {CanvasRenderingContext2D} ctx 
+ * @param {RobotDef} def 
+ * @param {RobotConfig} config 
+ */
+function drawWorkSpace(ctx, def, config) {
+    ctx.reset();
 
-const robotContext = robot.getContext("2d");
-if (!robotContext) {
-    throw new Error("Could not create 2D canvas context");
+    const len = def.l1 + def.l2;
+    const x_min = -len ;
+    const x_max = +len;
+    const x_range = x_max - x_min;
+
+    const y_min = -len;
+    const y_max = +len;
+    const y_range = y_max - y_min;
+
+
+    const scale = (ctx.canvas.width / x_range) * 0.9;
+
+    ctx.lineWidth = 1.0 / scale;
+
+    ctx.transform(
+        scale, 0,
+        0, -scale,
+        ctx.canvas.width / 2,
+        ctx.canvas.width / 2,
+    );
+
+    // Coordinate system
+    line(ctx, { x: x_min, y: 0}, { x: x_max, y: 0});
+    line(ctx, { x: 0, y: y_min}, { x: 0, y: y_max});
+
+    
 }
 
-const configCanvas = /** @type {HTMLCanvasElement} */(document.getElementById("config"));
+/**
+ * 
+ * @param {string} elementId 
+ * @returns {CanvasRenderingContext2D}
+ */
+function getContext(elementId) {
+    const canvas = /** @type {HTMLCanvasElement} */(document.getElementById(elementId));
+    if (!canvas) {
+        throw new Error("Could not find <canvas> with ID: " + elementId);
+    }
+    const context = canvas.getContext("2d");
+    if (!context) {
+        throw new Error("Could not create 2D canvas context for element ID: " + elementId);
+    }
 
-const configContext = configCanvas.getContext("2d");
-if (!configContext) {
-    throw new Error("Could not create 2D canvas context");
+    return context;
 }
+
+const robotContext = getContext("robot");
+const configContext = getContext("config");
+const workContext = getContext("work");
+
 
 const config = { q1: 0, q2: 0 };
 
@@ -240,6 +304,7 @@ function draw() {
     }
     drawRobot(robotContext, config);
     drawConfigSpace(configContext, robotDef, config);
+    drawWorkSpace(workContext, robotDef, config);
 }
 
 function nextFrame() {
@@ -256,18 +321,18 @@ q2Input.addEventListener('input', function() {
     nextFrame();
 });
 
-configCanvas.addEventListener('mousemove', function(event) {
+configContext.canvas.addEventListener('mousemove', function(event) {
     mouse.pos.x = event.offsetX;
     mouse.pos.y = event.offsetY;
     nextFrame();
 });
 
-configCanvas.addEventListener('mousedown', function(event) {
+configContext.canvas.addEventListener('mousedown', function(event) {
     mouse.left.down = true;
     nextFrame();
 });
 
-configCanvas.addEventListener('mouseup', function(event) {
+configContext.canvas.addEventListener('mouseup', function(event) {
     mouse.left.down = false;
     nextFrame();
 });
