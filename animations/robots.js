@@ -236,8 +236,9 @@ function drawWorkSpace(ctx, def, config) {
 
 
     const scale = (ctx.canvas.width / x_range) * 0.9;
+    const px = 1.0 / scale;
 
-    ctx.lineWidth = 1.0 / scale;
+    ctx.lineWidth = 1.0 * px;
 
     ctx.transform(
         scale, 0,
@@ -250,7 +251,16 @@ function drawWorkSpace(ctx, def, config) {
     line(ctx, { x: x_min, y: 0}, { x: x_max, y: 0});
     line(ctx, { x: 0, y: y_min}, { x: 0, y: y_max});
 
-    
+    const state = forward(def, config);
+
+    ctx.lineWidth = 2.0 * px;
+    ctx.strokeStyle = '#D84040';
+    line(ctx, robotPos, state.seg1);
+    line(ctx, state.seg1, state.seg2);
+
+    const pos = circle(state.seg2, 6.0 * px);
+    ctx.fillStyle = '#D84040';
+    ctx.fill(pos);
 }
 
 /**
