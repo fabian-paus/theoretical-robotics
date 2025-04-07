@@ -217,6 +217,82 @@ function drawConfigSpace(ctx, def, config) {
 }
 
 /**
+ * @typedef Workspace
+ * @property {number[][]} data
+ * @property {number} min_x
+ * @property {number} max_x
+ * @property {number} min_y
+ * @property {number} max_y
+ * @property {number} length_x
+ * @property {number} length_y
+ * @property {number} tick_x
+ * @property {number} tick_y
+ */
+
+/**
+ * 
+ * @param {RobotDef} def 
+ * @returns {Workspace}
+ */
+function createWorkspace(def) {
+    const len = def.l1 + def.l2;
+    const min_x = -len;
+    const max_x = +len;
+    const min_y = 0;
+    const max_y = +len;
+
+    const data = [];
+    for (let y = min_x; y <= max_y; ++y) {
+        const row = [];
+        for (let x = min_x; x <= max_x; ++x) {
+            row.push(0);
+        }
+        data.push(row);
+    }
+
+    // How many elements do we have in each dimension?
+    const length_x = 40;
+    const length_y = 20;
+
+    // How big is an element?
+    const range_x = max_x - min_x;
+    const tick_x = range_x / length_x;
+    const range_y = max_y - min_y;
+    const tick_y = range_y / length_y;
+    return { data, min_x, max_x, min_y, max_y,
+        length_x,
+        length_y,
+        tick_x,
+        tick_y,
+     };
+}
+
+/**
+ * 
+ * @param {Workspace} workspace 
+ * @param {number} x 
+ * @param {number} y 
+ * @param {number} value 
+ */
+function setWorkspaceValue(workspace, x, y, value) {
+    if (y < workspace.min_y || y > workspace.max_y) return;
+    if (x < workspace.min_x || x > workspace.max_x) return;
+
+    const y_offset = y - workspace.min_y;
+    const y_range = workspace.max_y - workspace.min_y;
+    const y_index = Math.floor(y_offset / workspace.tick_y);
+
+    const x_offset = x - workspace.min_x;
+    const x_range = workspace.max_x - workspace.min_x;
+    const x_index = Math.floor(x_offset / workspace.tick_x);
+
+    workspace.data[y_index][x_index] = value;
+
+}
+
+const workspace = createWorkspace(robotDef);
+
+/**
  * 
  * @param {CanvasRenderingContext2D} ctx 
  * @param {RobotDef} def 
@@ -247,11 +323,34 @@ function drawWorkSpace(ctx, def, config) {
         ctx.canvas.width / 2,
     );
 
+    const state = forward(def, config);
+
+    const x = state.seg2.x;
+    const y = state.seg2.y;
+
+    setWorkspaceValue(workspace, x, y, 1);
+
+    // Draw workspace pixels
+    for (let y = 0; y < workspace.data.length; ++y) {
+        const row = workspace.data[y];
+        for (let x = 0; x < row.length; ++x) {
+            const filled = row[x];
+            if (filled) {
+                ctx.fillStyle = '#F87070'
+            } else {
+                ctx.fillStyle = '#EEEEEE';
+            }
+
+            const x_pos = workspace.min_x + x * workspace.tick_x;
+            const y_pos = workspace.min_y + y * workspace.tick_y;
+            ctx.fillRect(x_pos, y_pos, workspace.tick_x, workspace.tick_y);
+        }
+    }
+
     // Coordinate system
+    ctx.strokeStyle = '#000000';
     line(ctx, { x: x_min, y: 0}, { x: x_max, y: 0});
     line(ctx, { x: 0, y: y_min}, { x: 0, y: y_max});
-
-    const state = forward(def, config);
 
     ctx.lineWidth = 2.0 * px;
     ctx.strokeStyle = '#D84040';
